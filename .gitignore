@@ -1,0 +1,27 @@
+# ===== Laravel (server) =====
+/server/vendor
+/server/node_modules
+/server/storage/*.key
+/server/public/storage
+/server/.env
+/server/.phpunit.result.cache
+/server/.idea
+/server/.vscode
+/server/public/hot
+
+# ===== Expo / React Native (client) =====
+/client/node_modules
+/client/.expo
+/client/.expo-shared
+/client/web-build
+/client/dist
+/client/*.apk
+/client/*.aab
+/client/*.keystore
+/client/.env
+/client/.vscode
+
+# ===== General =====
+.DS_Store
+Thumbs.db
+*.log
