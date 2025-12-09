@@ -1,20 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import * as SQLite from 'expo-sqlite';
+import { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as SQLite from "expo-sqlite";
 import * as Crypto from "expo-crypto";
-import { openDB } from 'idb';
-import uuid from 'react-native-uuid';
-import dbEvents from './dbEvents';
-import axious from '../utils/axious';
-import { NotificationManager } from '../NotificationManager';
+import { openDB } from "idb";
+import uuid from "react-native-uuid";
+import dbEvents from "./dbEvents";
+import axious from "../utils/axious";
+import { NotificationManager } from "../NotificationManager";
 
 const ensureColumn = async (db, table, column, definition) => {
   const columns = await db.getAllAsync(`PRAGMA table_info(${table});`);
-  const exists = columns.some(col => col.name === column);
+  const exists = columns.some((col) => col.name === column);
 
   if (!exists) {
-    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+    await db.execAsync(
+      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`
+    );
     console.log(`✅ Added missing column '${column}' to '${table}'`);
   }
 };
@@ -23,37 +25,41 @@ export const useChatDb = () => {
   const sqliteDbRef = useRef(null);
   const idbRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       (async () => {
-        idbRef.current = await openDB('chat_by_x-db', 4, {
+        idbRef.current = await openDB("chat_by_x-db", 4, {
           upgrade(db) {
-            if (!db.objectStoreNames.contains('chats')) {
-              const chatsStore = db.createObjectStore('chats', { keyPath: 'id' });
-              chatsStore.createIndex('conversation_id', 'conversation_id');
+            if (!db.objectStoreNames.contains("chats")) {
+              const chatsStore = db.createObjectStore("chats", {
+                keyPath: "id",
+              });
+              chatsStore.createIndex("conversation_id", "conversation_id");
             }
-            if (!db.objectStoreNames.contains('contacts')) {
-              db.createObjectStore('contacts', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("contacts")) {
+              db.createObjectStore("contacts", { keyPath: "id" });
             }
-            if (!db.objectStoreNames.contains('conversations')) {
-              db.createObjectStore('conversations', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("conversations")) {
+              db.createObjectStore("conversations", { keyPath: "id" });
             }
-            if (!db.objectStoreNames.contains('conversations_participants')) {
-              db.createObjectStore('conversations_participants', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("conversations_participants")) {
+              db.createObjectStore("conversations_participants", {
+                keyPath: "id",
+              });
             }
-            if (!db.objectStoreNames.contains('files')) {
-              db.createObjectStore('files', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("files")) {
+              db.createObjectStore("files", { keyPath: "id" });
             }
-            if (!db.objectStoreNames.contains('users_stored')) {
-              db.createObjectStore('users_stored', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("users_stored")) {
+              db.createObjectStore("users_stored", { keyPath: "id" });
             }
-            if (!db.objectStoreNames.contains('stories')) {
-              db.createObjectStore('stories', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("stories")) {
+              db.createObjectStore("stories", { keyPath: "id" });
             }
-            if (!db.objectStoreNames.contains('viewed_stories')) {
-              db.createObjectStore('viewed_stories', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains("viewed_stories")) {
+              db.createObjectStore("viewed_stories", { keyPath: "id" });
             }
           },
         });
@@ -61,7 +67,7 @@ export const useChatDb = () => {
       })();
     } else {
       (async () => {
-        sqliteDbRef.current = await SQLite.openDatabaseAsync('chat_by_x.db');
+        sqliteDbRef.current = await SQLite.openDatabaseAsync("chat_by_x.db");
 
         await sqliteDbRef.current.execAsync(`
           PRAGMA journal_mode = WAL;
@@ -138,13 +144,38 @@ export const useChatDb = () => {
           );          
         `);
 
-        await ensureColumn(sqliteDbRef.current, "conversations_participants", "email", "TEXT");
-        await ensureColumn(sqliteDbRef.current, "conversations", "updated_at", "TEXT");
+        await ensureColumn(
+          sqliteDbRef.current,
+          "conversations_participants",
+          "email",
+          "TEXT"
+        );
+        await ensureColumn(
+          sqliteDbRef.current,
+          "conversations",
+          "updated_at",
+          "TEXT"
+        );
         await ensureColumn(sqliteDbRef.current, "chats", "updated_at", "TEXT");
-        await ensureColumn(sqliteDbRef.current, "conversations_participants", "updated_at", "TEXT");
+        await ensureColumn(
+          sqliteDbRef.current,
+          "conversations_participants",
+          "updated_at",
+          "TEXT"
+        );
         await ensureColumn(sqliteDbRef.current, "stories", "text", "TEXT");
-        await ensureColumn(sqliteDbRef.current, "viewed_stories", "viewed", "INTEGER DEFAULT 1");
-        await ensureColumn(sqliteDbRef.current, "viewed_stories", "synced", "INTEGER DEFAULT 0");
+        await ensureColumn(
+          sqliteDbRef.current,
+          "viewed_stories",
+          "viewed",
+          "INTEGER DEFAULT 1"
+        );
+        await ensureColumn(
+          sqliteDbRef.current,
+          "viewed_stories",
+          "synced",
+          "INTEGER DEFAULT 0"
+        );
         await ensureColumn(sqliteDbRef.current, "files", "hash", "TEXT");
 
         setIsReady(true);
@@ -152,10 +183,10 @@ export const useChatDb = () => {
     }
   }, []);
 
-  const FILE_URL = "http://192.168.0.100/Chat_by_x/server/public"
+  const FILE_URL = "http://192.168.0.118/Chat_by_x/server/public";
 
-  const updateOrInsert = async (table, data, whereKey = 'id') => {
-    if (Platform.OS === 'web') {
+  const updateOrInsert = async (table, data, whereKey = "id") => {
+    if (Platform.OS === "web") {
       await idbRef.current.put(table, data);
     } else {
       const existing = await sqliteDbRef.current.getFirstAsync(
@@ -164,9 +195,9 @@ export const useChatDb = () => {
       );
 
       if (existing) {
-        const columns = Object.keys(data).filter(k => k !== whereKey);
-        const values = columns.map(k => data[k]);
-        const setClause = columns.map(c => `${c} = ?`).join(', ');
+        const columns = Object.keys(data).filter((k) => k !== whereKey);
+        const values = columns.map((k) => data[k]);
+        const setClause = columns.map((c) => `${c} = ?`).join(", ");
         await sqliteDbRef.current.runAsync(
           `UPDATE ${table} SET ${setClause} WHERE ${whereKey} = ?`,
           ...values,
@@ -174,20 +205,25 @@ export const useChatDb = () => {
         );
       } else {
         const columns = Object.keys(data);
-        const placeholders = columns.map(() => '?').join(', ');
-        const values = columns.map(k => data[k]);
+        const placeholders = columns.map(() => "?").join(", ");
+        const values = columns.map((k) => data[k]);
         try {
           await sqliteDbRef.current.runAsync(
-            `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`,
+            `INSERT INTO ${table} (${columns.join(
+              ", "
+            )}) VALUES (${placeholders})`,
             ...values
           );
         } catch (e) {
-          console.error(`[SQLite] Failed to insert into ${table}:`, e.message, data);
+          console.error(
+            `[SQLite] Failed to insert into ${table}:`,
+            e.message,
+            data
+          );
         }
       }
     }
   };
-
 
   // ----------------------
   // CRUD: CONTACTS
@@ -196,80 +232,92 @@ export const useChatDb = () => {
     //send to server, then save to client db
 
     try {
-      await axious('/api/save-contact', async(res) => {
-        if (res.success) {
-          const contact = res.contact
+      await axious(
+        "/api/save-contact",
+        async (res) => {
+          if (res.success) {
+            const contact = res.contact;
 
-          if (!contact) {
-            NotificationManager.push({ message: 'an error occured saving contact', type: 'error' })
+            if (!contact) {
+              NotificationManager.push({
+                message: "an error occured saving contact",
+                type: "error",
+              });
 
-            return
-          }
+              return;
+            }
 
-          const cont = {
-            id: contact.id,
-            creator_id: contact.creator_id,
-            recipient_id: contact.recipient_id,
-            email: contact.email,
-            name: contact.name,
-            synced: 1,
-            deleted: 0,
-            created_at: new Date().toISOString(),
-          };
+            const cont = {
+              id: contact.id,
+              creator_id: contact.creator_id,
+              recipient_id: contact.recipient_id,
+              email: contact.email,
+              name: contact.name,
+              synced: 1,
+              deleted: 0,
+              created_at: new Date().toISOString(),
+            };
 
-          if (Platform.OS === 'web') {
-            await idbRef.current.put('contacts', cont);
-          } else {
-            await sqliteDbRef.current.runAsync(
-              'INSERT INTO contacts (id, creator_id, recipient_id, email, name, synced, deleted) VALUES (?, ?, ?, ?, ?, 1, 0)',
-              cont.id, cont.creator_id, cont.recipient_id, cont.email, cont.name
-            );
-          }
+            if (Platform.OS === "web") {
+              await idbRef.current.put("contacts", cont);
+            } else {
+              await sqliteDbRef.current.runAsync(
+                "INSERT INTO contacts (id, creator_id, recipient_id, email, name, synced, deleted) VALUES (?, ?, ?, ?, ?, 1, 0)",
+                cont.id,
+                cont.creator_id,
+                cont.recipient_id,
+                cont.email,
+                cont.name
+              );
+            }
 
-          if (contact?.recipient_id) {
+            if (contact?.recipient_id) {
               console.log("inserting into users_stored 1");
-            await updateOrInsert("users_stored", {
-              id: contact?.recipient_id,
-              email: contact?.email
+              await updateOrInsert("users_stored", {
+                id: contact?.recipient_id,
+                email: contact?.email,
+              });
+            }
+
+            dbEvents.emit("contacts-changed");
+            callback?.(cont);
+          } else {
+            NotificationManager.push({
+              message: res.message,
+              type: "error",
             });
           }
-
-          dbEvents.emit('contacts-changed');
-          callback?.(cont);
-        } else {
-          NotificationManager.push({
-            message: res.message, 
-            type: "error"
-          })
+          // console.log(res);
+        },
+        {
+          method: "POST",
+          token,
+          data: {
+            email,
+            name,
+          },
+          headers: {
+            Accept: "application/json",
+          },
         }
-        // console.log(res);
-        
-      }, {
-        method: 'POST',
-        token,
-        data: {
-          email,
-          name,
-        }, 
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-
   };
 
   //read
   const getAllContacts = async (callback) => {
-    if (Platform.OS === 'web') {
-      const tx = idbRef.current.transaction('contacts', 'readonly');
-      const store = tx.objectStore('contacts');
+    if (Platform.OS === "web") {
+      const tx = idbRef.current.transaction("contacts", "readonly");
+      const store = tx.objectStore("contacts");
       const all = await store.getAll();
-      const sort = all.sort((a, b) => a.name > b.name)
+      const sort = all.sort((a, b) => a.name > b.name);
       callback(sort);
     } else {
       const rows = await sqliteDbRef.current.getAllAsync(
@@ -277,7 +325,7 @@ export const useChatDb = () => {
         []
       );
       console.log(rows);
-      
+
       callback(rows);
     }
   };
@@ -287,8 +335,6 @@ export const useChatDb = () => {
       const tx = idbRef.current.transaction("contacts", "readonly");
       const store = tx.objectStore("contacts");
       const all = await store.getAll();
-
-      
 
       // Sort alphabetically by name
       const sorted = all.sort((a, b) => a.name.localeCompare(b.name));
@@ -307,81 +353,85 @@ export const useChatDb = () => {
     }
   };
 
-
   const refreshContacts = async (token) => {
     if (!token) return;
     setLoading(true);
 
     try {
-      await axious('/api/get-contact', async (res) => {
-        console.log("Server contacts:", res);
+      await axious(
+        "/api/get-contact",
+        async (res) => {
+          console.log("Server contacts:", res);
 
-        if (res.success) {
-          const serverContacts = res.contact || [];
+          if (res.success) {
+            const serverContacts = res.contact || [];
 
-          // 1. Get all client contacts
-          let clientContacts = [];
-          if (Platform.OS === "web") {
-            const tx = idbRef.current.transaction("contacts", "readonly");
-            const store = tx.objectStore("contacts");
-            clientContacts = await store.getAll();
-          } else {
-            const result = await sqliteDbRef.current.getAllAsync(
-              "SELECT * FROM contacts"
-            );
-            clientContacts = result || [];
-          }
+            // 1. Get all client contacts
+            let clientContacts = [];
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction("contacts", "readonly");
+              const store = tx.objectStore("contacts");
+              clientContacts = await store.getAll();
+            } else {
+              const result = await sqliteDbRef.current.getAllAsync(
+                "SELECT * FROM contacts"
+              );
+              clientContacts = result || [];
+            }
 
-          // 2. Build quick lookup of server contacts by ID
-          const serverIds = new Set(serverContacts.map(c => c.id));
+            // 2. Build quick lookup of server contacts by ID
+            const serverIds = new Set(serverContacts.map((c) => c.id));
 
-          // 3. Delete contacts that are in client but not in server
-          for (const c of clientContacts) {
-            if (!serverIds.has(c.id)) {
-              if (Platform.OS === "web") {
-                const tx = idbRef.current.transaction("contacts", "readwrite");
-                const store = tx.objectStore("contacts");
-                await store.delete(c.id);
-              } else {
-                await sqliteDbRef.current.runAsync(
-                  "DELETE FROM contacts WHERE id = ?",
-                  [c.id]
-                );
+            // 3. Delete contacts that are in client but not in server
+            for (const c of clientContacts) {
+              if (!serverIds.has(c.id)) {
+                if (Platform.OS === "web") {
+                  const tx = idbRef.current.transaction(
+                    "contacts",
+                    "readwrite"
+                  );
+                  const store = tx.objectStore("contacts");
+                  await store.delete(c.id);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "DELETE FROM contacts WHERE id = ?",
+                    [c.id]
+                  );
+                }
               }
             }
-          }
 
-          // 4. Insert or update contacts from server
-          for (const contact of serverContacts) {
-            await updateOrInsert("contacts", {
-              id: contact.id,
-              creator_id: contact.creator_id,
-              recipient_id: contact.recipient_id,
-              email: contact.email,
-              name: contact.name,
-              synced: 1,
-              deleted: 0,
-            });
-
-            if (contact?.recipient_id) {
-              console.log("inserting into users_stored 2");
-              await updateOrInsert("users_stored", {
-                id: contact?.recipient_id,
-                email: contact?.email
+            // 4. Insert or update contacts from server
+            for (const contact of serverContacts) {
+              await updateOrInsert("contacts", {
+                id: contact.id,
+                creator_id: contact.creator_id,
+                recipient_id: contact.recipient_id,
+                email: contact.email,
+                name: contact.name,
+                synced: 1,
+                deleted: 0,
               });
+
+              if (contact?.recipient_id) {
+                console.log("inserting into users_stored 2");
+                await updateOrInsert("users_stored", {
+                  id: contact?.recipient_id,
+                  email: contact?.email,
+                });
+              }
             }
+
+            dbEvents.emit("contacts-changed");
+          } else {
+            NotificationManager.push({ message: res.message, type: "error" });
           }
-
-
-
-          dbEvents.emit("contacts-changed");
-        } else {
-          NotificationManager.push({ message: res.message, type: "error" });
+        },
+        {
+          method: "GET",
+          token,
         }
-      }, {
-        method: "GET",
-        token,
-      });
+      );
     } catch (e) {
       NotificationManager.push({
         message: `failed. ${e.message}`,
@@ -392,77 +442,82 @@ export const useChatDb = () => {
     }
   };
 
-
-
   //update
   const editContact = async (token, name, email, id) => {
     if (!token || !name || !email || !id) return;
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      await axious('/api/edit-contact', async(res) => {
-        if (res.success) {
-          const contact = res.contact
-          if (Platform.OS === 'web') {
-            const tx = idbRef.current.transaction('contacts', 'readwrite');
-            const store = tx.objectStore('contacts');
-            const msg = await store.get(id);
-            if (msg) {
-              msg.name = name;
-              msg.email = email;
-              msg.recipient_id = contact.recipient_id,
-              await store.put(msg);
+      await axious(
+        "/api/edit-contact",
+        async (res) => {
+          if (res.success) {
+            const contact = res.contact;
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction("contacts", "readwrite");
+              const store = tx.objectStore("contacts");
+              const msg = await store.get(id);
+              if (msg) {
+                msg.name = name;
+                msg.email = email;
+                (msg.recipient_id = contact.recipient_id), await store.put(msg);
+              }
+            } else {
+              await sqliteDbRef.current.runAsync(
+                "UPDATE contacts SET name = ?, email = ?, recipient_id = ? WHERE id = ?",
+                [name, email, contact.recipient_id, id]
+              );
             }
+
+            dbEvents.emit("contacts-changed");
+            NotificationManager.push({
+              message: "Contact updated",
+              type: "success",
+            });
           } else {
-            await sqliteDbRef.current.runAsync(
-              'UPDATE contacts SET name = ?, email = ?, recipient_id = ? WHERE id = ?',
-              [name, email, contact.recipient_id, id]
-            );
+            NotificationManager.push({
+              message: res.message,
+              type: "error",
+            });
           }
-
-          dbEvents.emit('contacts-changed');
-          NotificationManager.push({ message: 'Contact updated', type: 'success' });
-        } else {
-          NotificationManager.push({
-            message: res.message, 
-            type: "error"
-          })
+          // console.log(res);
+        },
+        {
+          method: "POST",
+          token,
+          data: {
+            id,
+            name,
+            email,
+          },
+          headers: {
+            Accept: "application/json",
+          },
         }
-        // console.log(res);
-        
-      }, {
-        method: 'POST',
-        token,
-        data: {
-          id,
-          name,
-          email
-        }, 
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-
-  }
+  };
 
   //delete
   const clearClientContact = async () => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       // IndexedDB: clear the entire store
-      await idbRef.current.clear('contacts');
+      await idbRef.current.clear("contacts");
     } else {
       // SQLite: delete all rows from the table
-      await sqliteDbRef.current.runAsync('DELETE FROM contacts');
+      await sqliteDbRef.current.runAsync("DELETE FROM contacts");
     }
 
     // Emit event so UI updates
-    dbEvents.emit('contacts-changed');
+    dbEvents.emit("contacts-changed");
   };
 
   const deleteContact = async (id, token) => {
@@ -471,46 +526,55 @@ export const useChatDb = () => {
     setLoading(true);
 
     try {
-      await axious('/api/delete-contact', async(res) => {
-        if (res.success) {
-          if (Platform.OS === 'web') {
-          // Delete directly from IndexedDB
-          const tx = idbRef.current.transaction('contacts', 'readwrite');
-          const store = tx.objectStore('contacts');
-          await store.delete(id);
-          await tx.done;
-        } else {
-          // Delete from SQLite
-          await sqliteDbRef.current.runAsync(
-            'DELETE FROM contacts WHERE id = ?',
-            [id]
-          );
-        }
+      await axious(
+        "/api/delete-contact",
+        async (res) => {
+          if (res.success) {
+            if (Platform.OS === "web") {
+              // Delete directly from IndexedDB
+              const tx = idbRef.current.transaction("contacts", "readwrite");
+              const store = tx.objectStore("contacts");
+              await store.delete(id);
+              await tx.done;
+            } else {
+              // Delete from SQLite
+              await sqliteDbRef.current.runAsync(
+                "DELETE FROM contacts WHERE id = ?",
+                [id]
+              );
+            }
 
-        dbEvents.emit('contacts-changed');
-        NotificationManager.push({ message: 'Contact deleted', type: 'success' });
-        } else {
-          NotificationManager.push({
-            message: res.message, 
-            type: "error"
-          })
+            dbEvents.emit("contacts-changed");
+            NotificationManager.push({
+              message: "Contact deleted",
+              type: "success",
+            });
+          } else {
+            NotificationManager.push({
+              message: res.message,
+              type: "error",
+            });
+          }
+          // console.log(res);
+        },
+        {
+          method: "POST",
+          token,
+          data: {
+            id,
+          },
+          headers: {
+            Accept: "application/json",
+          },
         }
-        // console.log(res);
-        
-      }, {
-        method: 'POST',
-        token,
-        data: {
-          id,
-        }, 
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
@@ -527,72 +591,72 @@ export const useChatDb = () => {
         }
 
         console.log("✅ All local media deleted successfully");
-        return true
+        return true;
       } catch (err) {
         console.error("❌ Failed to clear media:", err);
-        return false
+        return false;
       }
     }
-    return true
+    return true;
   };
   const downloadUsersPP = async (token) => {
     if (!token) return;
     setLoading(true);
 
-    const users = []
+    const users = [];
 
-    if (Platform.OS === 'web') {
-      const tx = idbRef.current.transaction('users_stored', 'readonly');
-      const store = tx.objectStore('users_stored');
+    if (Platform.OS === "web") {
+      const tx = idbRef.current.transaction("users_stored", "readonly");
+      const store = tx.objectStore("users_stored");
       const all = await store.getAll();
-      
+
       all.forEach((u) => {
-        users.push(u.id)
-      })
+        users.push(u.id);
+      });
     } else {
       const rows = await sqliteDbRef.current.getAllAsync(
         `SELECT * FROM users_stored ORDER BY name ASC`,
         []
       );
-      
+
       rows.forEach((u) => {
-        users.push(u.id)
-      })
-  
+        users.push(u.id);
+      });
     }
-    
 
     try {
-      await axious('/api/users-pp', async (res) => {
-        console.log("User Images:", res);
+      await axious(
+        "/api/users-pp",
+        async (res) => {
+          console.log("User Images:", res);
 
-        if (res.success) {
+          if (res.success) {
+            const pp = res.pp;
 
-          const pp = res.pp
-
-          pp.forEach( async (pp) => {
-            await updateOrInsert("files", {
-              id: pp.id,
-              text: pp.text,
-              user_id: pp.user_id,
-              file_path: FILE_URL+pp.file_path,
-              file_type: pp.file_type,
-              updated_at: pp.updated_at,
-              synced: 1,
-              deleted: 0,
+            pp.forEach(async (pp) => {
+              await updateOrInsert("files", {
+                id: pp.id,
+                text: pp.text,
+                user_id: pp.user_id,
+                file_path: FILE_URL + pp.file_path,
+                file_type: pp.file_type,
+                updated_at: pp.updated_at,
+                synced: 1,
+                deleted: 0,
+              });
             });
-          })
-          
-        } else {
-          NotificationManager.push({ message: res.message, type: "error" });
+          } else {
+            NotificationManager.push({ message: res.message, type: "error" });
+          }
+        },
+        {
+          method: "POST",
+          token,
+          data: {
+            user_ids: users,
+          },
         }
-      }, {
-        method: "POST",
-        token,
-        data: {
-          user_ids: users
-        }
-      });
+      );
     } catch (e) {
       NotificationManager.push({
         message: `failed. ${e.message}`,
@@ -601,7 +665,7 @@ export const useChatDb = () => {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const getPPFile_id = async (user_id) => {
     if (Platform.OS === "web") {
@@ -659,7 +723,11 @@ export const useChatDb = () => {
                 );
 
                 if (local.file_path) {
-                  url = { url: local.file_path, type: local.file_type, state: "m1" };
+                  url = {
+                    url: local.file_path,
+                    type: local.file_type,
+                    state: "m1",
+                  };
                   if (!runCallback) callback(url), (runCallback = true);
                 }
                 return false;
@@ -674,7 +742,11 @@ export const useChatDb = () => {
               if (!runCallback) callback(url), (runCallback = true);
               return local;
             } else if (local.file_path) {
-              url = { url: local.file_path, type: local.file_type, state: "m3" };
+              url = {
+                url: local.file_path,
+                type: local.file_type,
+                state: "m3",
+              };
               if (!runCallback) callback(url), (runCallback = true);
               return false;
             }
@@ -744,7 +816,10 @@ export const useChatDb = () => {
             const fileUri = `${FileSystem.documentDirectory}${file.id}_${file.file_type}${ext}`;
 
             try {
-              const result = await FileSystem.downloadAsync(file.file_path, fileUri);
+              const result = await FileSystem.downloadAsync(
+                file.file_path,
+                fileUri
+              );
 
               // ✅ Check file integrity by comparing size (±5% tolerance)
               const info = await FileSystem.getInfoAsync(result.uri);
@@ -761,7 +836,10 @@ export const useChatDb = () => {
                 console.warn("⚠️ Size mismatch — retrying download...");
                 await FileSystem.deleteAsync(result.uri, { idempotent: true });
 
-                const retry = await FileSystem.downloadAsync(file.file_path, fileUri);
+                const retry = await FileSystem.downloadAsync(
+                  file.file_path,
+                  fileUri
+                );
                 const retryInfo = await FileSystem.getInfoAsync(retry.uri);
                 const retrySize = retryInfo.size || 0;
 
@@ -769,7 +847,9 @@ export const useChatDb = () => {
                 const retryValid = diffRetry / expectedSize < 0.05;
 
                 if (!retryValid) {
-                  console.error("❌ Retry failed size validation, skipping save.");
+                  console.error(
+                    "❌ Retry failed size validation, skipping save."
+                  );
                   return;
                 }
 
@@ -853,7 +933,10 @@ export const useChatDb = () => {
           const fileUri = `${FileSystem.documentDirectory}${file.id}_${file.file_type}${ext}`;
 
           try {
-            const result = await FileSystem.downloadAsync(file.file_path, fileUri);
+            const result = await FileSystem.downloadAsync(
+              file.file_path,
+              fileUri
+            );
 
             // ✅ Check file integrity by comparing size (±5% tolerance)
             const info = await FileSystem.getInfoAsync(result.uri);
@@ -870,7 +953,10 @@ export const useChatDb = () => {
               console.warn("⚠️ Size mismatch — retrying download...");
               await FileSystem.deleteAsync(result.uri, { idempotent: true });
 
-              const retry = await FileSystem.downloadAsync(file.file_path, fileUri);
+              const retry = await FileSystem.downloadAsync(
+                file.file_path,
+                fileUri
+              );
               const retryInfo = await FileSystem.getInfoAsync(retry.uri);
               const retrySize = retryInfo.size || 0;
 
@@ -878,7 +964,9 @@ export const useChatDb = () => {
               const retryValid = diffRetry / expectedSize < 0.05;
 
               if (!retryValid) {
-                console.error("❌ Retry failed size validation, skipping save.");
+                console.error(
+                  "❌ Retry failed size validation, skipping save."
+                );
                 return;
               }
 
@@ -933,31 +1021,27 @@ export const useChatDb = () => {
     }
   };
 
-
   const getUserProfilePicture = async (user_id, token, callback) => {
     try {
-      
+      const file_id = await getPPFile_id(user_id);
 
-      const file_id = await getPPFile_id(user_id)
-      
-      console.log('working', file_id);
+      console.log("working", file_id);
 
       // 2️⃣ If no local file record, fallback: fetch PP info from server
       if (!file_id) {
         await axious(
           "/api/users-pp",
           async (response) => {
-            
             if (response.success && Array.isArray(response.pp)) {
               // Find that user's PP from the returned array
               const file = response.pp.find((f) => f.user_id == user_id);
               if (file) {
                 await getMedia(file.id, token, (file) => {
-                  callback?.(file)
+                  callback?.(file);
                 });
               }
             }
-            callback?.(null)
+            callback?.(null);
           },
           {
             method: "POST",
@@ -966,30 +1050,29 @@ export const useChatDb = () => {
           }
         );
 
-        return
+        return;
       }
 
       await getMedia(file_id, token, (file) => {
-        callback?.(file)
+        callback?.(file);
         console.log("got the pp: ", file);
-        
       });
-      return
+      return;
     } catch (error) {
       console.error("getUserProfilePicture error:", error);
-      callback?.(null)
-      return
+      callback?.(null);
+      return;
     }
   };
 
   const removePP = async (user_id, callback) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         // Use readwrite because you're updating data
         const tx = idbRef.current.transaction("files", "readwrite");
         const store = tx.objectStore("files");
         const all = await store.getAll();
-        
+
         const pp = all.find((p) => p.user_id == user_id && p.text === "p>p+");
         if (pp) {
           pp.file_path = null;
@@ -999,7 +1082,6 @@ export const useChatDb = () => {
         }
 
         await tx.done; // optional: ensures transaction completes
-
       } else {
         // Use parameter binding to safely insert nulls
         await sqliteDbRef.current.runAsync(
@@ -1021,13 +1103,13 @@ export const useChatDb = () => {
     try {
       for (const stories of stories_arr) {
         if (!stories.id) return;
-        
+
         await updateOrInsert("stories", {
           id: stories.id,
           text: stories?.text,
           file_id: stories?.file_id,
           user_id: stories.user_id,
-          expires_at: stories.expires_at,          
+          expires_at: stories.expires_at,
           created_at: stories.created_at,
           updated_at: stories.updated_at,
           synced: 1,
@@ -1036,41 +1118,37 @@ export const useChatDb = () => {
 
         if (stories?.file_id) {
           await getMedia(stories.file_id, token, (file) => {
-            console.log("Story file added: ",file)
+            console.log("Story file added: ", file);
           });
         }
       }
 
-
-      dbEvents.emit('stories-changed');
+      dbEvents.emit("stories-changed");
       callback?.();
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
+  };
 
   const getStoriesLastUpdatedAt = async (callback) => {
     try {
-      if (Platform.OS === 'web') {
-        const tx = idbRef.current.transaction(
-          ['stories',],
-          'readonly'
-        );
+      if (Platform.OS === "web") {
+        const tx = idbRef.current.transaction(["stories"], "readonly");
 
-        const storiesStore = tx.objectStore('stories');
+        const storiesStore = tx.objectStore("stories");
 
-        const [allStories] = await Promise.all([
-          storiesStore.getAll(),
-        ]);
+        const [allStories] = await Promise.all([storiesStore.getAll()]);
 
         const joinedStories = allStories
-          .filter(story => story.updated_at)
+          .filter((story) => story.updated_at)
           .sort((b, a) => new Date(a.updated_at) - new Date(b.updated_at));
 
-        return joinedStories[0]
+        return joinedStories[0];
       } else {
         const storiesRaw = await sqliteDbRef.current.getAllAsync(
           `SELECT 
@@ -1083,150 +1161,157 @@ export const useChatDb = () => {
         return storiesRaw[0];
       }
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error("Error fetching messages:", error);
       return { error: true, message: error.message };
     }
-  }
+  };
 
   const downloadStories = async (token, callback) => {
     try {
-      await axious('/api/get-stories', async(res) => {
-        console.log(res);
-        if (res.success) {
-          
-          const serverStories = res.stories || [];
+      await axious(
+        "/api/get-stories",
+        async (res) => {
+          console.log(res);
+          if (res.success) {
+            const serverStories = res.stories || [];
 
-          let clientStories = [];
-          if (Platform.OS === "web") {
-            const tx = idbRef.current.transaction("stories", "readonly");
-            const store = tx.objectStore("stories");
-            clientStories = await store.getAll();
-          } else {
-            const result = await sqliteDbRef.current.getAllAsync(
-              "SELECT * FROM stories"
-            );
-            clientStories = result || [];
-          }
+            let clientStories = [];
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction("stories", "readonly");
+              const store = tx.objectStore("stories");
+              clientStories = await store.getAll();
+            } else {
+              const result = await sqliteDbRef.current.getAllAsync(
+                "SELECT * FROM stories"
+              );
+              clientStories = result || [];
+            }
 
-          const serverIds = new Set(serverStories.map(s => s.id));
+            const serverIds = new Set(serverStories.map((s) => s.id));
 
-          for (const s of clientStories) {
-            if (!serverIds.has(s.id)) {
-              if (Platform.OS === "web") {
-                const tx = idbRef.current.transaction("stories", "readwrite");
-                const store = tx.objectStore("stories");
-                await store.delete(s.id);
-              } else {
-                await sqliteDbRef.current.runAsync(
-                  "DELETE FROM stories WHERE id = ?",
-                  [s.id]
-                );
+            for (const s of clientStories) {
+              if (!serverIds.has(s.id)) {
+                if (Platform.OS === "web") {
+                  const tx = idbRef.current.transaction("stories", "readwrite");
+                  const store = tx.objectStore("stories");
+                  await store.delete(s.id);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "DELETE FROM stories WHERE id = ?",
+                    [s.id]
+                  );
+                }
               }
+            }
+
+            for (const stories of serverStories) {
+              await updateOrInsert("stories", {
+                id: stories.id,
+                text: stories?.text,
+                file_id: stories?.file_id,
+                user_id: stories.user_id,
+                expires_at: stories.expires_at,
+                created_at: stories.created_at,
+                updated_at: stories.updated_at,
+                synced: 1,
+                deleted: 0,
+              });
             }
           }
 
-          for (const stories of serverStories) {
-            await updateOrInsert("stories", {
-              id: stories.id,
-              text: stories?.text,
-              file_id: stories?.file_id,
-              user_id: stories.user_id,
-              expires_at: stories.expires_at,          
-              created_at: stories.created_at,
-              updated_at: stories.updated_at,
-              synced: 1,
-              deleted: 0,
-            });
-          }
+          dbEvents.emit("stories-changed");
+          callback?.(res);
+        },
+        {
+          method: "GET",
+          token,
+          headers: {
+            Accept: "application/json",
+          },
         }
-          
-        dbEvents.emit('stories-changed');
-        callback?.(res);
-        
-      }, {
-        method: 'GET',
-        token,
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const allStories = async (token, callback) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       const tx = idbRef.current.transaction(
-        ['stories', 'contacts', 'files', 'viewed_stories'],
-        'readonly'
+        ["stories", "contacts", "files", "viewed_stories"],
+        "readonly"
       );
 
-      const storiesStore = tx.objectStore('stories');
-      const contStore = tx.objectStore('contacts');
-      const filesStore = tx.objectStore('files');
-      const viewedStore = tx.objectStore('viewed_stories');
+      const storiesStore = tx.objectStore("stories");
+      const contStore = tx.objectStore("contacts");
+      const filesStore = tx.objectStore("files");
+      const viewedStore = tx.objectStore("viewed_stories");
 
-      const [allStories, allContacts, allFiles, viewedStories] = await Promise.all([
-        storiesStore.getAll(),
-        contStore.getAll(),
-        filesStore.getAll(),
-        viewedStore.getAll()
-      ]);
+      const [allStories, allContacts, allFiles, viewedStories] =
+        await Promise.all([
+          storiesStore.getAll(),
+          contStore.getAll(),
+          filesStore.getAll(),
+          viewedStore.getAll(),
+        ]);
 
-      const stories = allStories.map((story) => {
-        story['file_url'] = story['file_type'] = story['name'] = ""
-        story['viewed'] = false
+      const stories = allStories
+        .map((story) => {
+          story["file_url"] = story["file_type"] = story["name"] = "";
+          story["viewed"] = false;
 
-        let retS = true
+          let retS = true;
 
-        if (!story?.file_id && !story?.text) {
-          retS = false
-        }
+          if (!story?.file_id && !story?.text) {
+            retS = false;
+          }
 
-        if (story?.file_id) {
-          let f = allFiles.find((f) => f.id == story.file_id)
+          if (story?.file_id) {
+            let f = allFiles.find((f) => f.id == story.file_id);
 
-          if (!f) {
-            getMedia(story.file_id, token, (file) => {
-              if (file?.type && file?.url) {
-                story['file_url'] = file?.url
-                story['file_type'] = file?.type
-              }
-            })
+            if (!f) {
+              getMedia(story.file_id, token, (file) => {
+                if (file?.type && file?.url) {
+                  story["file_url"] = file?.url;
+                  story["file_type"] = file?.type;
+                }
+              });
+            } else {
+              story["file_url"] = f?.file_path;
+              story["file_type"] = f?.file_type;
+            }
+          }
+
+          if (story?.user_id) {
+            let u = allContacts.find((c) => c.recipient_id == story.user_id);
+
+            if (u) {
+              story["name"] = u?.name;
+            }
           } else {
-            story['file_url'] = f?.file_path
-            story['file_type'] = f?.file_type
+            retS = false;
           }
-          
-        }
 
-        if (story?.user_id) {
-          let u = allContacts.find((c) => c.recipient_id == story.user_id)
+          let v = viewedStories.find((vi) => vi.id == story.id);
 
-          if (u) {
-            story['name'] = u?.name
+          if (v) {
+            story["viewed"] = true;
           }
-        } else {
-          retS = false
-        }
 
-        let v = viewedStories.find((vi) => vi.id == story.id)
+          return retS ? story : "";
+        })
+        .filter((s) => s)
+        .sort(
+          (a, b) =>
+            new Date(a.created_at || 0).getTime() -
+            new Date(b.created_at || 0).getTime()
+        );
 
-        if (v) {
-          story['viewed'] = true
-        }
-
-        return retS ? story : ''  
-      }).filter((s) => s).sort(
-        (a, b) =>
-        new Date(a.created_at || 0).getTime() -
-        new Date(b.created_at || 0).getTime()
-      );
-      
-      
       callback?.(stories);
     } else {
       try {
@@ -1258,16 +1343,16 @@ export const useChatDb = () => {
         console.error("SQLite error:", e);
       }
     }
-  }
+  };
 
   const getAStory = async (id) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       const tx = idbRef.current.transaction(
-        ['stories', 'contacts'],
-        'readonly'
+        ["stories", "contacts"],
+        "readonly"
       );
-      const storiesStore = tx.objectStore('stories');
-      const contStore = tx.objectStore('contacts');
+      const storiesStore = tx.objectStore("stories");
+      const contStore = tx.objectStore("contacts");
 
       const [story, allContacts] = await Promise.all([
         storiesStore.get(id),
@@ -1275,24 +1360,24 @@ export const useChatDb = () => {
       ]);
 
       if (!story) {
-        return null       
+        return null;
       }
 
-      story['file_url'] = story['file_type'] = story['name'] = ""
+      story["file_url"] = story["file_type"] = story["name"] = "";
 
       if (!story?.file_id && !story?.text) {
-        return null 
+        return null;
       }
 
       if (!story?.user_id) {
-        return null
+        return null;
       }
 
       if (story?.file_id) {
         const txF = idbRef.current.transaction("files", "readonly");
         const storeF = txF.objectStore("files");
 
-        const f = await storeF.get(Number(story.file_id));        
+        const f = await storeF.get(Number(story.file_id));
 
         if (f) {
           story.file_url = f.file_path;
@@ -1300,15 +1385,13 @@ export const useChatDb = () => {
         }
       }
 
-
-      let u = allContacts.find((c) => c.recipient_id == story?.user_id)
+      let u = allContacts.find((c) => c.recipient_id == story?.user_id);
 
       if (u) {
-        story['name'] = u?.name
+        story["name"] = u?.name;
       }
 
-      return story
-
+      return story;
     } else {
       try {
         const rows = await sqliteDbRef.current.getAllAsync(
@@ -1335,43 +1418,43 @@ export const useChatDb = () => {
           [id]
         );
         // console.log("story mobile rows", rows);
-        
-        return rows?.[0] || null
+
+        return rows?.[0] || null;
       } catch (e) {
         console.error("SQLite error:", e);
-        return null
+        return null;
       }
     }
-  }
+  };
 
   const deleteStory = async (id) => {
-    if (Platform.OS === 'web') {
-      const tx = idbRef.current.transaction('stories', 'readwrite');
-      const store = tx.objectStore('stories');
+    if (Platform.OS === "web") {
+      const tx = idbRef.current.transaction("stories", "readwrite");
+      const store = tx.objectStore("stories");
       const story = await store.get(id);
       if (story) {
         story.file_id = null;
         story.text = null;
         await store.put(story);
-      } 
+      }
     } else {
       await sqliteDbRef.current.runAsync(
         `UPDATE stories SET file_id = ?, text = ? WHERE id = ?`,
         [null, null, id]
       );
     }
-    dbEvents.emit('stories-changed');
-    return true
-  }
+    dbEvents.emit("stories-changed");
+    return true;
+  };
 
   const cleanLocal_ = async () => {
     const now = Date.now();
 
     // 🕒 Delete expired stories
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       try {
-        const tx = idbRef.current.transaction('stories', 'readwrite');
-        const store = tx.objectStore('stories');
+        const tx = idbRef.current.transaction("stories", "readwrite");
+        const store = tx.objectStore("stories");
         const allStories = await store.getAll();
 
         const expiredStories = allStories.filter(
@@ -1383,7 +1466,7 @@ export const useChatDb = () => {
             await store.delete(s.id);
             console.log(`🗑️ Story ${s.id} deleted`);
           }
-          dbEvents.emit('stories-changed');
+          dbEvents.emit("stories-changed");
         } else {
           console.log("No expired stories to delete");
         }
@@ -1398,10 +1481,13 @@ export const useChatDb = () => {
 
         if (rows.length > 0) {
           for (const s of rows) {
-            await sqliteDbRef.current.runAsync("DELETE FROM stories WHERE id = ?", [s.id]);
+            await sqliteDbRef.current.runAsync(
+              "DELETE FROM stories WHERE id = ?",
+              [s.id]
+            );
             console.log(`🗑️ Story ${s.id} deleted`);
           }
-          dbEvents.emit('stories-changed');
+          dbEvents.emit("stories-changed");
         } else {
           console.log("No expired stories to delete");
         }
@@ -1414,22 +1500,21 @@ export const useChatDb = () => {
     await cleanFiles();
   };
 
-
   const cleanFiles = async () => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       const tx = idbRef.current.transaction(
-        ['stories', 'users_stored', 'files'],
-        'readwrite'
+        ["stories", "users_stored", "files"],
+        "readwrite"
       );
 
-      const storiesStore = tx.objectStore('stories');
-      const usersStored = tx.objectStore('users_stored');
-      const filesStore = tx.objectStore('files');
+      const storiesStore = tx.objectStore("stories");
+      const usersStored = tx.objectStore("users_stored");
+      const filesStore = tx.objectStore("files");
 
       const [allStories, allUsers, allFiles] = await Promise.all([
         storiesStore.getAll(),
         usersStored.getAll(),
-        filesStore.getAll()
+        filesStore.getAll(),
       ]);
 
       let deletedCount = 0;
@@ -1455,8 +1540,12 @@ export const useChatDb = () => {
       if (deletedCount === 0) console.log("No unused files to delete");
     } else {
       try {
-        const allStories = await sqliteDbRef.current.getAllAsync("SELECT id, file_id FROM stories");
-        const allUsers = await sqliteDbRef.current.getAllAsync("SELECT id FROM users_stored");
+        const allStories = await sqliteDbRef.current.getAllAsync(
+          "SELECT id, file_id FROM stories"
+        );
+        const allUsers = await sqliteDbRef.current.getAllAsync(
+          "SELECT id FROM users_stored"
+        );
         const allFiles = await sqliteDbRef.current.getAllAsync(
           "SELECT id, user_id, text, local_storage FROM files"
         );
@@ -1477,13 +1566,18 @@ export const useChatDb = () => {
           if (delF) {
             if (f.local_storage) {
               try {
-                await FileSystem.deleteAsync(f.local_storage, { idempotent: true });
+                await FileSystem.deleteAsync(f.local_storage, {
+                  idempotent: true,
+                });
               } catch (err) {
                 console.warn("Error deleting file from storage:", err.message);
               }
             }
 
-            await sqliteDbRef.current.runAsync("DELETE FROM files WHERE id = ?", [f.id]);
+            await sqliteDbRef.current.runAsync(
+              "DELETE FROM files WHERE id = ?",
+              [f.id]
+            );
             deletedCount++;
             console.log(`🗑️ File ${f.id} deleted`);
           }
@@ -1496,26 +1590,31 @@ export const useChatDb = () => {
     }
   };
 
-  const storeViewedStories = async (story_id ) => {
+  const storeViewedStories = async (story_id) => {
     if (story_id) {
       await updateOrInsert("viewed_stories", {
         id: story_id,
         viewed: 1,
         synced: 0,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
-      dbEvents.emit('stories-changed');
+      dbEvents.emit("stories-changed");
     }
-  }
+  };
 
   // // ----------------------
   // // CRUD: CHATS/CONVERSATION/CONVERSATION PARTICIPANTS
   // // ----------------------
 
-
-  const createMessage = async (conversationId, user_ids, token, current_user_id, message, messageType = "text", callback) => {
-
-    
+  const createMessage = async (
+    conversationId,
+    user_ids,
+    token,
+    current_user_id,
+    message,
+    messageType = "text",
+    callback
+  ) => {
     if (conversationId) {
       //send new msg
       // console.log('sending old msg');
@@ -1531,281 +1630,323 @@ export const useChatDb = () => {
         created_at: new Date().toISOString(),
       };
 
-      if (Platform.OS === 'web') {
-        await idbRef.current.put('chats', msg);
+      if (Platform.OS === "web") {
+        await idbRef.current.put("chats", msg);
       } else {
         await sqliteDbRef.current.runAsync(
-          'INSERT INTO chats (id, conversation_id, sender_id, message, message_type, synced, deleted) VALUES (?, ?, ?, ?, ?, 0, 0)',
-          id, msg.conversation_id, msg.sender_id, message, messageType
+          "INSERT INTO chats (id, conversation_id, sender_id, message, message_type, synced, deleted) VALUES (?, ?, ?, ?, ?, 0, 0)",
+          id,
+          msg.conversation_id,
+          msg.sender_id,
+          message,
+          messageType
         );
       }
 
-      dbEvents.emit('chats-changed');
-      dbEvents.emit('conversations-changed');
+      dbEvents.emit("chats-changed");
+      dbEvents.emit("conversations-changed");
 
       try {
-        await axious('/api/send-message', async(res) => {
-          if (res.success) {
-            if (Platform.OS === 'web') {
-              const tx = idbRef.current.transaction('chats', 'readwrite');
-              const store = tx.objectStore('chats');
-              let msg = await store.get(id);
-              if (msg) {
-                msg = res.sent_message;                
-                await store.put(msg); // or store.put(msg, msg.id);
+        await axious(
+          "/api/send-message",
+          async (res) => {
+            if (res.success) {
+              if (Platform.OS === "web") {
+                const tx = idbRef.current.transaction("chats", "readwrite");
+                const store = tx.objectStore("chats");
+                let msg = await store.get(id);
+                if (msg) {
+                  msg = res.sent_message;
+                  await store.put(msg); // or store.put(msg, msg.id);
+                }
+              } else {
+                await sqliteDbRef.current.runAsync(
+                  "UPDATE chats SET updated_at = ?, synced = 1 WHERE id = ?",
+                  [res.sent_message.updated_at, id]
+                );
               }
-            } else {
-              await sqliteDbRef.current.runAsync(
-                'UPDATE chats SET updated_at = ?, synced = 1 WHERE id = ?',
-                [res.sent_message.updated_at, id]
-              );
-            }
 
-            dbEvents.emit('chats-changed');
+              dbEvents.emit("chats-changed");
+            }
+            // console.log(res);
+          },
+          {
+            method: "POST",
+            token,
+            data: {
+              message,
+              conversation_id: msg.conversation_id,
+              client_id: msg.id,
+            },
+            headers: {
+              Accept: "application/json",
+            },
           }
-          // console.log(res);
-          
-        }, {
-          method: 'POST',
-          token,
-          data: {
-            message,
-            conversation_id: msg.conversation_id,
-            client_id: msg.id
-          }, 
-          headers: {
-            'Accept' : 'application/json' 
-          }
-        })
+        );
       } catch (e) {
-        NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+        NotificationManager.push({
+          message: `failed. ${e.message}`,
+          type: "error",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
 
-
-
-      callback?.(msg)
+      callback?.(msg);
     } else {
       //send to server, then save to client db
 
       try {
-        await axious('/api/create-conversation', async(res) => {
-          if (res.success) {
-            const conversation = res.conversation
+        await axious(
+          "/api/create-conversation",
+          async (res) => {
+            if (res.success) {
+              const conversation = res.conversation;
 
-            if (!conversation) {
-              NotificationManager.push({ message: 'an error occured creating conversation', type: 'error' })
+              if (!conversation) {
+                NotificationManager.push({
+                  message: "an error occured creating conversation",
+                  type: "error",
+                });
 
-              return
-            }
+                return;
+              }
 
-            const conv = {
-              id: conversation.id,
-              type: conversation.type,
-              name: conversation.name,
-              synced: 1,
-              deleted: 0,
-              created_at: new Date().toISOString(),
-            };
-
-            if (Platform.OS === 'web') {
-              await idbRef.current.put('conversations', conv);
-            } else {
-              await sqliteDbRef.current.runAsync(
-                'INSERT INTO conversations (id, type, name, synced, deleted) VALUES ( ?, ?, ?, 1, 0)',
-                conv.id, conv.type, conv.name
-              );
-            }
-
-            dbEvents.emit('conversations-changed');
-
-            const participants = conversation.participants || []
-
-            if (participants.length<1) {
-              NotificationManager.push({ message: 'an error occured adding participants', type: 'error' })
-
-              return
-            }
-
-            participants.forEach( async participant => {
-              const parti = {
-                id: participant.id,
-                conversation_id: participant.conversation_id,
-                user_id: participant.user_id,
-                email: participant.user.email,
+              const conv = {
+                id: conversation.id,
+                type: conversation.type,
+                name: conversation.name,
                 synced: 1,
                 deleted: 0,
                 created_at: new Date().toISOString(),
               };
 
-              if (Platform.OS === 'web') {
-                await idbRef.current.put('conversations_participants', parti);
+              if (Platform.OS === "web") {
+                await idbRef.current.put("conversations", conv);
               } else {
                 await sqliteDbRef.current.runAsync(
-                  'INSERT INTO conversations_participants (id, conversation_id, user_id, email, synced, deleted) VALUES ( ?, ?, ?, ?, 1, 0)',
-                  parti.id, parti.conversation_id, parti.user_id, parti.email
+                  "INSERT INTO conversations (id, type, name, synced, deleted) VALUES ( ?, ?, ?, 1, 0)",
+                  conv.id,
+                  conv.type,
+                  conv.name
                 );
               }
-            });
 
-            dbEvents.emit('conversations_participants-changed');
+              dbEvents.emit("conversations-changed");
 
-            //send new msg
-            const id = uuid.v4();
-            const msg = {
-              id,
-              conversation_id: conv.id,
-              sender_id: current_user_id,
-              message,
-              message_type: messageType,
-              synced: 0,
-              deleted: 0,
-              created_at: new Date().toISOString(),
-            };
+              const participants = conversation.participants || [];
 
-            if (Platform.OS === 'web') {
-              await idbRef.current.put('chats', msg);
-            } else {
-              await sqliteDbRef.current.runAsync(
-                'INSERT INTO chats (id, conversation_id, sender_id, message, message_type, synced, deleted) VALUES (?, ?, ?, ?, ?, 0, 0)',
-                id, msg.conversation_id, msg.sender_id, message, messageType
-              );
-            }
+              if (participants.length < 1) {
+                NotificationManager.push({
+                  message: "an error occured adding participants",
+                  type: "error",
+                });
 
-            dbEvents.emit('chats-changed');
+                return;
+              }
 
-            try {
-              await axious('/api/send-message', async(res) => {
-                if (res.success) {
-                  if (Platform.OS === 'web') {
-                    const tx = idbRef.current.transaction('chats', 'readwrite');
-                    const store = tx.objectStore('chats');
-                    const msg = await store.get(id);
-                    if (msg) {
-                      msg.synced = 1;
-                      await store.put(msg);
-                    }
-                  } else {
-                    await sqliteDbRef.current.runAsync(
-                      'UPDATE chats SET synced = 1 WHERE id = ?',
-                      [id]
-                    );
-                  }
+              participants.forEach(async (participant) => {
+                const parti = {
+                  id: participant.id,
+                  conversation_id: participant.conversation_id,
+                  user_id: participant.user_id,
+                  email: participant.user.email,
+                  synced: 1,
+                  deleted: 0,
+                  created_at: new Date().toISOString(),
+                };
 
-                  dbEvents.emit('chats-changed');
+                if (Platform.OS === "web") {
+                  await idbRef.current.put("conversations_participants", parti);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "INSERT INTO conversations_participants (id, conversation_id, user_id, email, synced, deleted) VALUES ( ?, ?, ?, ?, 1, 0)",
+                    parti.id,
+                    parti.conversation_id,
+                    parti.user_id,
+                    parti.email
+                  );
                 }
-                console.log(res);
-                
-              }, {
-                method: 'POST',
-                token,
-                data: {
+              });
+
+              dbEvents.emit("conversations_participants-changed");
+
+              //send new msg
+              const id = uuid.v4();
+              const msg = {
+                id,
+                conversation_id: conv.id,
+                sender_id: current_user_id,
+                message,
+                message_type: messageType,
+                synced: 0,
+                deleted: 0,
+                created_at: new Date().toISOString(),
+              };
+
+              if (Platform.OS === "web") {
+                await idbRef.current.put("chats", msg);
+              } else {
+                await sqliteDbRef.current.runAsync(
+                  "INSERT INTO chats (id, conversation_id, sender_id, message, message_type, synced, deleted) VALUES (?, ?, ?, ?, ?, 0, 0)",
+                  id,
+                  msg.conversation_id,
+                  msg.sender_id,
                   message,
-                  conversation_id: msg.conversation_id,
-                  client_id: msg.id
-                }, 
-                headers: {
-                  'Accept' : 'application/json' 
-                }
-              })
-            } catch (e) {
-              NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
-            } finally {
-              setLoading(false)
+                  messageType
+                );
+              }
+
+              dbEvents.emit("chats-changed");
+
+              try {
+                await axious(
+                  "/api/send-message",
+                  async (res) => {
+                    if (res.success) {
+                      if (Platform.OS === "web") {
+                        const tx = idbRef.current.transaction(
+                          "chats",
+                          "readwrite"
+                        );
+                        const store = tx.objectStore("chats");
+                        const msg = await store.get(id);
+                        if (msg) {
+                          msg.synced = 1;
+                          await store.put(msg);
+                        }
+                      } else {
+                        await sqliteDbRef.current.runAsync(
+                          "UPDATE chats SET synced = 1 WHERE id = ?",
+                          [id]
+                        );
+                      }
+
+                      dbEvents.emit("chats-changed");
+                    }
+                    console.log(res);
+                  },
+                  {
+                    method: "POST",
+                    token,
+                    data: {
+                      message,
+                      conversation_id: msg.conversation_id,
+                      client_id: msg.id,
+                    },
+                    headers: {
+                      Accept: "application/json",
+                    },
+                  }
+                );
+              } catch (e) {
+                NotificationManager.push({
+                  message: `failed. ${e.message}`,
+                  type: "error",
+                });
+              } finally {
+                setLoading(false);
+              }
+
+              callback?.(msg);
+            } else {
+              NotificationManager.push({
+                message: res.message,
+                type: "error",
+              });
             }
-
-
-
-            callback?.(msg);
-          } else {
-            NotificationManager.push({
-              message: res.message, 
-              type: "error"
-            })
+          },
+          {
+            method: "POST",
+            token,
+            data: {
+              user_ids,
+              type: "single",
+            },
+            headers: {
+              Accept: "application/json",
+            },
           }
-          
-        }, {
-          method: 'POST',
-          token,
-          data: {
-            user_ids,
-            type: 'single'
-          }, 
-          headers: {
-            'Accept' : 'application/json' 
-          }
-        })
+        );
       } catch (e) {
-        NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+        NotificationManager.push({
+          message: `failed. ${e.message}`,
+          type: "error",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
   };
 
   const getMessages = async (conversationId, user_id, callback) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         const tx = idbRef.current.transaction(
-          ['chats', 'conversations', 'conversations_participants', 'contacts'],
-          'readonly'
+          ["chats", "conversations", "conversations_participants", "contacts"],
+          "readonly"
         );
 
-        const chatsStore = tx.objectStore('chats');
-        const convStore = tx.objectStore('conversations');
-        const partStore = tx.objectStore('conversations_participants');
-        const contactStore = tx.objectStore('contacts');
+        const chatsStore = tx.objectStore("chats");
+        const convStore = tx.objectStore("conversations");
+        const partStore = tx.objectStore("conversations_participants");
+        const contactStore = tx.objectStore("contacts");
 
         const [allChats, allConvs, allParts, allContacts] = await Promise.all([
           chatsStore.getAll(),
           convStore.getAll(),
           partStore.getAll(),
-          contactStore.getAll()
+          contactStore.getAll(),
         ]);
 
         const participants = allParts.filter(
-          p => String(p.conversation_id) === String(conversationId) && !p.deleted
+          (p) =>
+            String(p.conversation_id) === String(conversationId) && !p.deleted
         );
 
         const conversations = allConvs.filter(
-          c => String(c.id) === String(conversationId) && !c.deleted
+          (c) => String(c.id) === String(conversationId) && !c.deleted
         );
 
         const contacts = allContacts.filter(
-          c => String(c.creator_id) === String(user_id)
+          (c) => String(c.creator_id) === String(user_id)
         );
 
         // --- LEFT JOIN for conversations (attach participants + contacts)
-        const joinedConversations = conversations
-          .map(conv => {
-            const convParticipants = participants.filter(
-              p => String(p.conversation_id) === String(conv.id)
-            );
+        const joinedConversations =
+          conversations
+            .map((conv) => {
+              const convParticipants = participants.filter(
+                (p) => String(p.conversation_id) === String(conv.id)
+              );
 
-            const participantWithContact = convParticipants.map(p => ({
-              ...p,
-              contact:
-                contacts.find(c => String(c.recipient_id) === String(p.user_id)) || null
-            }));
+              const participantWithContact = convParticipants.map((p) => ({
+                ...p,
+                contact:
+                  contacts.find(
+                    (c) => String(c.recipient_id) === String(p.user_id)
+                  ) || null,
+              }));
 
-            return {
-              ...conv,
-              participants: participantWithContact
-            };
-          })
-          .sort(
-            (a, b) =>
-              new Date(a.created_at || 0).getTime() -
-              new Date(b.created_at || 0).getTime()
-          )[0] || null;
+              return {
+                ...conv,
+                participants: participantWithContact,
+              };
+            })
+            .sort(
+              (a, b) =>
+                new Date(a.created_at || 0).getTime() -
+                new Date(b.created_at || 0).getTime()
+            )[0] || null;
 
         // --- LEFT JOIN for conversation_participants (attach contacts)
         const joinedParticipants = participants
-          .map(p => ({
+          .map((p) => ({
             ...p,
             contact:
-              contacts.find(c => String(c.recipient_id) === String(p.user_id)) || null
+              contacts.find(
+                (c) => String(c.recipient_id) === String(p.user_id)
+              ) || null,
           }))
           .sort(
             (a, b) =>
@@ -1816,14 +1957,15 @@ export const useChatDb = () => {
         // --- LEFT JOIN for chats (attach participant + contact)
         const joinedChats = allChats
           .filter(
-            m => String(m.conversation_id) === String(conversationId) && !m.deleted
+            (m) =>
+              String(m.conversation_id) === String(conversationId) && !m.deleted
           )
-          .map(chat => {
+          .map((chat) => {
             const participant = participants.find(
-              p => String(p.user_id) === String(chat.sender_id)
+              (p) => String(p.user_id) === String(chat.sender_id)
             );
             const contact = contacts.find(
-              c => String(c.recipient_id) === String(chat.sender_id)
+              (c) => String(c.recipient_id) === String(chat.sender_id)
             );
 
             return {
@@ -1833,11 +1975,12 @@ export const useChatDb = () => {
                     ...participant,
                     contact:
                       contacts.find(
-                        c => String(c.recipient_id) === String(participant.user_id)
-                      ) || null
+                        (c) =>
+                          String(c.recipient_id) === String(participant.user_id)
+                      ) || null,
                   }
                 : null,
-              contact: contact || null
+              contact: contact || null,
             };
           })
           .sort(
@@ -1849,9 +1992,8 @@ export const useChatDb = () => {
         callback({
           chats: joinedChats,
           conversation: joinedConversations,
-          conversations_participants: joinedParticipants
+          conversations_participants: joinedParticipants,
         });
-
       } else {
         // Native (SQLite) — no changes
         const chatsRaw = await sqliteDbRef.current.getAllAsync(
@@ -1871,7 +2013,7 @@ export const useChatDb = () => {
         );
 
         // Now restructure rows into nested objects
-        const chats = chatsRaw.map(row => ({
+        const chats = chatsRaw.map((row) => ({
           // base chat columns
           id: row.id,
           conversation_id: row.conversation_id,
@@ -1900,11 +2042,11 @@ export const useChatDb = () => {
                       creator_id: row.contact_creator_id,
                       deleted: row.contact_deleted,
                       recipient_id: row.contact_recipient_id,
-                      synced: row.contact_synced
+                      synced: row.contact_synced,
                     }
-                  : null
+                  : null,
               }
-            : null
+            : null,
         }));
         //
 
@@ -1941,8 +2083,8 @@ export const useChatDb = () => {
               created_at: conversationsRaw[0].conversation_created_at,
               deleted: conversationsRaw[0].conversation_deleted,
               participants: conversationsRaw
-                .filter(row => row.participant_id) // ignore null participant rows
-                .map(row => ({
+                .filter((row) => row.participant_id) // ignore null participant rows
+                .map((row) => ({
                   id: row.participant_id,
                   user_id: row.participant_user_id,
                   created_at: row.participant_created_at,
@@ -1951,10 +2093,10 @@ export const useChatDb = () => {
                     ? {
                         id: row.contact_id,
                         name: row.contact_name,
-                        recipient_id: row.contact_recipient_id
+                        recipient_id: row.contact_recipient_id,
                       }
-                    : null
-                }))
+                    : null,
+                })),
             }
           : null;
 
@@ -1971,7 +2113,7 @@ export const useChatDb = () => {
           [user_id, conversationId]
         );
 
-        const participants = participantsRaw.map(row => ({
+        const participants = participantsRaw.map((row) => ({
           id: row.id,
           user_id: row.user_id,
           conversation_id: row.conversation_id,
@@ -1986,68 +2128,76 @@ export const useChatDb = () => {
                 creator_id: row.contact_creator_id,
                 deleted: row.contact_deleted,
                 recipient_id: row.contact_recipient_id,
-                synced: row.contact_synced
+                synced: row.contact_synced,
               }
-            : null
+            : null,
         }));
-
 
         callback({
           chats,
           conversation,
-          conversations_participants: participants
+          conversations_participants: participants,
         });
       }
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error("Error fetching messages:", error);
       callback({ error: true, message: error.message });
     }
   };
 
   const getAllConversations = async (user_id, callback) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         // --- IndexedDB Version ---
         const tx = idbRef.current.transaction(
-          ['chats', 'conversations', 'conversations_participants', 'contacts'],
-          'readonly'
+          ["chats", "conversations", "conversations_participants", "contacts"],
+          "readonly"
         );
 
-        const chatsStore = tx.objectStore('chats');
-        const convStore = tx.objectStore('conversations');
-        const partStore = tx.objectStore('conversations_participants');
-        const contactStore = tx.objectStore('contacts');
+        const chatsStore = tx.objectStore("chats");
+        const convStore = tx.objectStore("conversations");
+        const partStore = tx.objectStore("conversations_participants");
+        const contactStore = tx.objectStore("contacts");
 
         const [allChats, allConvs, allParts, allContacts] = await Promise.all([
           chatsStore.getAll(),
           convStore.getAll(),
           partStore.getAll(),
-          contactStore.getAll()
+          contactStore.getAll(),
         ]);
 
-        const contacts = allContacts.filter(c => String(c.creator_id) === String(user_id));
+        const contacts = allContacts.filter(
+          (c) => String(c.creator_id) === String(user_id)
+        );
 
         // --- JOIN Conversations with Participants and Contacts ---
         const conversations = allConvs
-          .filter(c => !c.deleted)
-          .map(conv => {
+          .filter((c) => !c.deleted)
+          .map((conv) => {
             const convParticipants = allParts.filter(
-              p => String(p.conversation_id) === String(conv.id) && !p.deleted
+              (p) => String(p.conversation_id) === String(conv.id) && !p.deleted
             );
 
-            const participantsWithContact = convParticipants.map(p => ({
+            const participantsWithContact = convParticipants.map((p) => ({
               ...p,
-              contact: contacts.find(c => String(c.recipient_id) === String(p.user_id)) || null
+              contact:
+                contacts.find(
+                  (c) => String(c.recipient_id) === String(p.user_id)
+                ) || null,
             }));
 
             // Get only the last chat for this conversation
-            const lastChat = allChats
-              .filter(m => String(m.conversation_id) === String(conv.id) && !m.deleted)
-              .sort(
-                (a, b) =>
-                  new Date(b.created_at || 0).getTime() -
-                  new Date(a.created_at || 0).getTime()
-              )[0] || null;
+            const lastChat =
+              allChats
+                .filter(
+                  (m) =>
+                    String(m.conversation_id) === String(conv.id) && !m.deleted
+                )
+                .sort(
+                  (a, b) =>
+                    new Date(b.created_at || 0).getTime() -
+                    new Date(a.created_at || 0).getTime()
+                )[0] || null;
 
             return {
               ...conv,
@@ -2055,11 +2205,12 @@ export const useChatDb = () => {
               last_chat: lastChat
                 ? {
                     ...lastChat,
-                    participant: participantsWithContact.find(
-                      p => String(p.user_id) === String(lastChat.sender_id)
-                    ) || null
+                    participant:
+                      participantsWithContact.find(
+                        (p) => String(p.user_id) === String(lastChat.sender_id)
+                      ) || null,
                   }
-                : null
+                : null,
             };
           })
           .sort(
@@ -2069,7 +2220,6 @@ export const useChatDb = () => {
           );
 
         callback(conversations);
-
       } else {
         // --- SQLite Version ---
         // Fetch all conversations with participants and contacts
@@ -2103,7 +2253,7 @@ export const useChatDb = () => {
 
         // Group by conversation
         const conversationsMap = {};
-        conversationsRaw.forEach(row => {
+        conversationsRaw.forEach((row) => {
           if (!conversationsMap[row.conversation_id]) {
             conversationsMap[row.conversation_id] = {
               id: row.conversation_id,
@@ -2111,7 +2261,7 @@ export const useChatDb = () => {
               type: row.conversation_type,
               created_at: row.conversation_created_at,
               deleted: row.conversation_deleted,
-              participants: []
+              participants: [],
             };
           }
 
@@ -2129,9 +2279,9 @@ export const useChatDb = () => {
                     recipient_id: row.contact_recipient_id,
                     creator_id: row.contact_creator_id,
                     deleted: row.contact_deleted,
-                    synced: row.contact_synced
+                    synced: row.contact_synced,
                   }
-                : null
+                : null,
             });
           }
         });
@@ -2152,7 +2302,7 @@ export const useChatDb = () => {
         );
 
         // Attach last chat to conversation
-        chatsRaw.forEach(chat => {
+        chatsRaw.forEach((chat) => {
           if (conversationsMap[chat.conversation_id]) {
             conversationsMap[chat.conversation_id].last_chat = chat;
           }
@@ -2168,17 +2318,20 @@ export const useChatDb = () => {
         callback(conversations);
       }
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error("Error fetching conversations:", error);
       callback({ error: true, message: error.message });
     }
   };
 
   const conversationExist = async (user_id, user2id, callback) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         // --- IndexedDB ---
-        const tx = idbRef.current.transaction(['conversations_participants'], 'readonly');
-        const partStore = tx.objectStore('conversations_participants');
+        const tx = idbRef.current.transaction(
+          ["conversations_participants"],
+          "readonly"
+        );
+        const partStore = tx.objectStore("conversations_participants");
 
         const allParts = await partStore.getAll();
 
@@ -2187,28 +2340,29 @@ export const useChatDb = () => {
 
         // Get all conversationIds for user_id
         const convsOfA = allParts
-          .filter(p => String(p.user_id) === String(user_id) && !p.deleted)
-          .map(p => p.conversation_id);
+          .filter((p) => String(p.user_id) === String(user_id) && !p.deleted)
+          .map((p) => p.conversation_id);
 
         for (const convId of convsOfA) {
           // Get all participants for this conversation
           const participants = allParts
-            .filter(p => String(p.conversation_id) === String(convId) && !p.deleted)
-            .map(p => String(p.user_id));
+            .filter(
+              (p) => String(p.conversation_id) === String(convId) && !p.deleted
+            )
+            .map((p) => String(p.user_id));
 
           const uniqueParts = [...new Set(participants)];
 
           // Compare: both sets must match exactly
           if (
             uniqueParts.length === targetSet.length &&
-            uniqueParts.every(u => targetSet.includes(u))
+            uniqueParts.every((u) => targetSet.includes(u))
           ) {
             return callback?.(convId);
           }
         }
 
         return callback?.(null); // ❌ no matching conversation found
-
       } else {
         // --- SQLite ---
         const sql = `
@@ -2231,7 +2385,7 @@ export const useChatDb = () => {
           expectedCount,
           user_id,
           user2id,
-          expectedCount
+          expectedCount,
         ]);
 
         if (result.length > 0) {
@@ -2241,32 +2395,26 @@ export const useChatDb = () => {
         return callback?.(null);
       }
     } catch (err) {
-      console.error('Error in checkConversationExists:', err);
+      console.error("Error in checkConversationExists:", err);
       throw err;
     }
   };
 
   const getChatLastUpdatedAt = async (callback) => {
     try {
-      if (Platform.OS === 'web') {
-        const tx = idbRef.current.transaction(
-          ['chats',],
-          'readonly'
-        );
+      if (Platform.OS === "web") {
+        const tx = idbRef.current.transaction(["chats"], "readonly");
 
-        const chatsStore = tx.objectStore('chats');
+        const chatsStore = tx.objectStore("chats");
 
-        const [allChats] = await Promise.all([
-          chatsStore.getAll(),
-        ]);
+        const [allChats] = await Promise.all([chatsStore.getAll()]);
 
         const joinedChats = allChats
-          .filter(chat => chat.updated_at)
+          .filter((chat) => chat.updated_at)
           .sort((b, a) => new Date(a.updated_at) - new Date(b.updated_at));
 
         // callback?.(joinedChats[0]);
-        return joinedChats[0]
-
+        return joinedChats[0];
       } else {
         // Native (SQLite) — no changes
         const chatsRaw = await sqliteDbRef.current.getAllAsync(
@@ -2278,196 +2426,213 @@ export const useChatDb = () => {
         );
 
         // callback?.(chatsRaw[0]);
-        return chatsRaw[0]
+        return chatsRaw[0];
       }
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error("Error fetching messages:", error);
       // callback({ error: true, message: error.message });
-      return { error: true, message: error.message }
+      return { error: true, message: error.message };
     }
   };
 
   const downloadMessages = async (token, callback) => {
     try {
-      await axious('/api/download-messages', async(res) => {
-        if (res.success) {
-          const serverConversation = res.conversations || [];
+      await axious(
+        "/api/download-messages",
+        async (res) => {
+          if (res.success) {
+            const serverConversation = res.conversations || [];
 
-          let clientConversation = [];
-          if (Platform.OS === "web") {
-            const tx = idbRef.current.transaction("conversations", "readonly");
-            const store = tx.objectStore("conversations");
-            clientConversation = await store.getAll();
-          } else {
-            const result = await sqliteDbRef.current.getAllAsync(
-              "SELECT * FROM conversations"
-            );
-            clientConversation = result || [];
-          }
+            let clientConversation = [];
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction(
+                "conversations",
+                "readonly"
+              );
+              const store = tx.objectStore("conversations");
+              clientConversation = await store.getAll();
+            } else {
+              const result = await sqliteDbRef.current.getAllAsync(
+                "SELECT * FROM conversations"
+              );
+              clientConversation = result || [];
+            }
 
-          const serverIds = new Set(serverConversation.map(c => c.id));
+            const serverIds = new Set(serverConversation.map((c) => c.id));
 
-          for (const c of clientConversation) {
-            if (!serverIds.has(c.id)) {
-              if (Platform.OS === "web") {
-                const tx = idbRef.current.transaction("conversations", "readwrite");
-                const store = tx.objectStore("conversations");
-                await store.delete(c.id);
-              } else {
-                await sqliteDbRef.current.runAsync(
-                  "DELETE FROM conversations WHERE id = ?",
-                  [c.id]
-                );
+            for (const c of clientConversation) {
+              if (!serverIds.has(c.id)) {
+                if (Platform.OS === "web") {
+                  const tx = idbRef.current.transaction(
+                    "conversations",
+                    "readwrite"
+                  );
+                  const store = tx.objectStore("conversations");
+                  await store.delete(c.id);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "DELETE FROM conversations WHERE id = ?",
+                    [c.id]
+                  );
+                }
               }
             }
-          }
 
-          for (const conversation of serverConversation) {
-            await updateOrInsert("conversations", {
-              id: conversation.id,
-              name: conversation.name,
-              type: conversation.type,
-              created_at: conversation.created_at,
-              updated_at: conversation.updated_at,
-              synced: 1,
-              deleted: 0,
-            });
-          }
-
-
-          const serverChats = res.chats || [];
-
-          let clientchat = [];
-          if (Platform.OS === "web") {
-            const tx = idbRef.current.transaction("chats", "readonly");
-            const store = tx.objectStore("chats");
-            clientchat = await store.getAll();
-          } else {
-            const result = await sqliteDbRef.current.getAllAsync(
-              "SELECT * FROM chats"
-            );
-            clientchat = result || [];
-          }
-
-          const serverChatsids = new Set(serverChats.map(c => c.id));
-
-          for (const c of clientchat) {
-            if (!serverChatsids.has(c.id)) {
-              if (Platform.OS === "web") {
-                const tx = idbRef.current.transaction("chats", "readwrite");
-                const store = tx.objectStore("chats");
-                await store.delete(c.id);
-              } else {
-                await sqliteDbRef.current.runAsync(
-                  "DELETE FROM chats WHERE id = ?",
-                  [c.id]
-                );
-              }
-            }
-          }
-
-          for (const chat of serverChats) {
-            if (chat.id) {
-              await updateOrInsert("chats", {
-                id: chat.id,
-                conversation_id: chat.conversation_id,
-                sender_id: chat.sender_id,
-                message: chat.message,
-                message_type: chat.message_type,
-                created_at: chat.created_at,
-                updated_at: chat.updated_at,
+            for (const conversation of serverConversation) {
+              await updateOrInsert("conversations", {
+                id: conversation.id,
+                name: conversation.name,
+                type: conversation.type,
+                created_at: conversation.created_at,
+                updated_at: conversation.updated_at,
                 synced: 1,
                 deleted: 0,
               });
             }
-          }
 
-          const serverParticipants = res.participants || [];
+            const serverChats = res.chats || [];
 
-          // 1. Get all client participants
-          let clientparticipants = [];
-          if (Platform.OS === "web") {
-            const tx = idbRef.current.transaction("conversations_participants", "readonly");
-            const store = tx.objectStore("conversations_participants");
-            clientparticipants = await store.getAll();
-          } else {
-            const result = await sqliteDbRef.current.getAllAsync(
-              "SELECT * FROM conversations_participants"
+            let clientchat = [];
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction("chats", "readonly");
+              const store = tx.objectStore("chats");
+              clientchat = await store.getAll();
+            } else {
+              const result = await sqliteDbRef.current.getAllAsync(
+                "SELECT * FROM chats"
+              );
+              clientchat = result || [];
+            }
+
+            const serverChatsids = new Set(serverChats.map((c) => c.id));
+
+            for (const c of clientchat) {
+              if (!serverChatsids.has(c.id)) {
+                if (Platform.OS === "web") {
+                  const tx = idbRef.current.transaction("chats", "readwrite");
+                  const store = tx.objectStore("chats");
+                  await store.delete(c.id);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "DELETE FROM chats WHERE id = ?",
+                    [c.id]
+                  );
+                }
+              }
+            }
+
+            for (const chat of serverChats) {
+              if (chat.id) {
+                await updateOrInsert("chats", {
+                  id: chat.id,
+                  conversation_id: chat.conversation_id,
+                  sender_id: chat.sender_id,
+                  message: chat.message,
+                  message_type: chat.message_type,
+                  created_at: chat.created_at,
+                  updated_at: chat.updated_at,
+                  synced: 1,
+                  deleted: 0,
+                });
+              }
+            }
+
+            const serverParticipants = res.participants || [];
+
+            // 1. Get all client participants
+            let clientparticipants = [];
+            if (Platform.OS === "web") {
+              const tx = idbRef.current.transaction(
+                "conversations_participants",
+                "readonly"
+              );
+              const store = tx.objectStore("conversations_participants");
+              clientparticipants = await store.getAll();
+            } else {
+              const result = await sqliteDbRef.current.getAllAsync(
+                "SELECT * FROM conversations_participants"
+              );
+              clientparticipants = result || [];
+            }
+
+            const serverParticipantsIds = new Set(
+              serverParticipants.map((c) => c.id)
             );
-            clientparticipants = result || [];
-          }
 
-          const serverParticipantsIds = new Set(serverParticipants.map(c => c.id));
+            for (const c of clientparticipants) {
+              if (!serverParticipantsIds.has(c.id)) {
+                if (Platform.OS === "web") {
+                  const tx = idbRef.current.transaction(
+                    "conversations_participants",
+                    "readwrite"
+                  );
+                  const store = tx.objectStore("conversations_participants");
+                  await store.delete(c.id);
+                } else {
+                  await sqliteDbRef.current.runAsync(
+                    "DELETE FROM conversations_participants WHERE id = ?",
+                    [c.id]
+                  );
+                }
+              }
+            }
 
-          for (const c of clientparticipants) {
-            if (!serverParticipantsIds.has(c.id)) {
-              if (Platform.OS === "web") {
-                const tx = idbRef.current.transaction("conversations_participants", "readwrite");
-                const store = tx.objectStore("conversations_participants");
-                await store.delete(c.id);
-              } else {
-                await sqliteDbRef.current.runAsync(
-                  "DELETE FROM conversations_participants WHERE id = ?",
-                  [c.id]
-                );
+            for (const participants of serverParticipants) {
+              await updateOrInsert("conversations_participants", {
+                id: participants.id,
+                conversation_id: participants.conversation_id,
+                user_id: participants.user_id,
+                email: participants.user.email,
+                created_at: participants.created_at,
+                updated_at: participants.updated_at,
+                synced: 1,
+                deleted: 0,
+              });
+              if (participants?.user_id) {
+                console.log("inserting into users_stored 3");
+
+                await updateOrInsert("users_stored", {
+                  id: participants?.user_id,
+                  email: participants?.user?.email,
+                });
               }
             }
           }
 
-          for (const participants of serverParticipants) {
-            await updateOrInsert("conversations_participants", {
-              id: participants.id,
-              conversation_id: participants.conversation_id,
-              user_id: participants.user_id,
-              email: participants.user.email,
-              created_at: participants.created_at,
-              updated_at: participants.updated_at,
-              synced: 1,
-              deleted: 0,
-            });
-            if (participants?.user_id) {
-              console.log("inserting into users_stored 3");
-              
-              await updateOrInsert("users_stored", {
-                id: participants?.user_id,
-                email: participants?.user?.email
-              });
-            }
-            
-            
-          }
+          dbEvents.emit("conversations_participants-changed");
+          dbEvents.emit("chats-changed");
+          dbEvents.emit("conversations-changed");
+          callback?.(res);
+        },
+        {
+          method: "POST",
+          token,
+          headers: {
+            Accept: "application/json",
+          },
         }
-          
-        dbEvents.emit('conversations_participants-changed');
-        dbEvents.emit('chats-changed');
-        dbEvents.emit('conversations-changed');
-        callback?.(res);
-        
-      }, {
-        method: 'POST',
-        token,
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const InsertChats = async (chat_arr, callback) => {
     try {
       for (const chat of chat_arr) {
         if (!chat.id) return;
-        
+
         await updateOrInsert("chats", {
           id: chat.id,
           conversation_id: chat.conversation_id,
           message: chat.message,
           message_type: chat.message_type,
-          sender_id: chat.sender_id,          
+          sender_id: chat.sender_id,
           created_at: chat.created_at,
           updated_at: chat.updated_at,
           synced: 1,
@@ -2475,64 +2640,68 @@ export const useChatDb = () => {
         });
       }
 
-
-      dbEvents.emit('conversations_participants-changed');
-      dbEvents.emit('chats-changed');
-      dbEvents.emit('conversations-changed');
+      dbEvents.emit("conversations_participants-changed");
+      dbEvents.emit("chats-changed");
+      dbEvents.emit("conversations-changed");
       callback?.();
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      NotificationManager.push({
+        message: `failed. ${e.message}`,
+        type: "error",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const clearClientMessages = async () => {
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('conversations');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("conversations");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM conversations');
+      await sqliteDbRef.current.runAsync("DELETE FROM conversations");
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('chats');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("chats");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM chats');
+      await sqliteDbRef.current.runAsync("DELETE FROM chats");
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('conversations_participants');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("conversations_participants");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM conversations_participants');
+      await sqliteDbRef.current.runAsync(
+        "DELETE FROM conversations_participants"
+      );
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('files');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("files");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM files');
+      await sqliteDbRef.current.runAsync("DELETE FROM files");
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('users_stored');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("users_stored");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM users_stored');
+      await sqliteDbRef.current.runAsync("DELETE FROM users_stored");
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('stories');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("stories");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM stories');
+      await sqliteDbRef.current.runAsync("DELETE FROM stories");
     }
 
-    if (Platform.OS === 'web') {
-      await idbRef.current.clear('viewed_stories');
+    if (Platform.OS === "web") {
+      await idbRef.current.clear("viewed_stories");
     } else {
-      await sqliteDbRef.current.runAsync('DELETE FROM viewed_stories');
+      await sqliteDbRef.current.runAsync("DELETE FROM viewed_stories");
     }
 
-    await clearAllMedia()
+    await clearAllMedia();
 
-    dbEvents.emit('contacts-changed');
+    dbEvents.emit("contacts-changed");
   };
 
   // const getMessages = async (conversationId, callback) => {
@@ -2668,6 +2837,6 @@ export const useChatDb = () => {
     deleteStory,
     getAStory,
     cleanLocal_,
-    storeViewedStories
+    storeViewedStories,
   };
 };

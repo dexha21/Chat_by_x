@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 const axiosInstance = axios.create({
-  baseURL: "http://192.168.0.100/Chat_by_x/server/public/", 
+  baseURL: "http://192.168.0.118/Chat_by_x/server/public/",
   timeout: 100000,
 });
 

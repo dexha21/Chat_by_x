@@ -1,0 +1,7 @@
+Features
+Fast live chat
+Works even with poor network (uses small local storage to load chats)
+Easy profile updates
+Add/edit/delete contacts using email
+Stories (images/videos, only visible to mutual contacts)
+Works on Android, iOS, and web

@@ -4,83 +4,95 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   StyleSheet,
-  Dimensions
-} from 'react-native'
-import React, { useContext, useState } from 'react'
-import BackgroundContainer from '../../components/public/BackgroundContainer'
-import Textx from '../../components/public/Textx'
-import Logo from '../../components/public/Logo'
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import { useSystemColors } from '../../constants/useSystemColors'
-import Buttons from '../../components/public/Buttons'
-import SecondaryContainer from '../../components/public/SecondaryContainer'
-import TextxInput from '../../components/public/TextxInput'
-import Spacer from '../../components/public/Spacer'
-import { AuthContext } from '../../contexts/AuthContext'
-import { NotificationManager } from '../../components/public/NotificationManager'
-import Loading from '../../components/public/Loading'
-import axious from '../../components/public/utils/axious'
+  Dimensions,
+} from "react-native";
+import React, { useContext, useState } from "react";
+import BackgroundContainer from "../../components/public/BackgroundContainer";
+import Textx from "../../components/public/Textx";
+import Logo from "../../components/public/Logo";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useSystemColors } from "../../constants/useSystemColors";
+import Buttons from "../../components/public/Buttons";
+import SecondaryContainer from "../../components/public/SecondaryContainer";
+import TextxInput from "../../components/public/TextxInput";
+import Spacer from "../../components/public/Spacer";
+import { AuthContext } from "../../contexts/AuthContext";
+import { NotificationManager } from "../../components/public/NotificationManager";
+import Loading from "../../components/public/Loading";
+import axious from "../../components/public/utils/axious";
 
 const SignIn = () => {
-  const [ email, setEmail ] = useState('')
-  const [ password, setPassword ] = useState('')
-  const [ loading, setLoading ] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-
-  const router = useRouter()
-  const systemColor = useSystemColors()
-  const screenWidth = Dimensions.get('window').width
-  const { setUser } = useContext(AuthContext)
+  const router = useRouter();
+  const systemColor = useSystemColors();
+  const screenWidth = Dimensions.get("window").width;
+  const { setUser } = useContext(AuthContext);
 
   const loginUser = async () => {
-    setLoading(true)
+    setLoading(true);
 
     try {
-      await axious('/api/login', async(res) => {
-        console.log(res);
-        
-        if (res.success) {
-          await setUser(res.token, res.user.name, res.user.email, res.user.id)
-            .catch(err => console.error("Failed to save user:", err));
+      await axious(
+        "/api/login",
+        async (res) => {
+          console.log(res);
 
-          NotificationManager.push({ message: "You have been logged in.", type: "success"});
-          router.replace("/messages");
-        } else {
-          NotificationManager.push({
-            message: res.message, 
-            type: "error"
-          })
+          if (res.success) {
+            await setUser(
+              res.token,
+              res.user.name,
+              res.user.email,
+              res.user.id
+            ).catch((err) => console.error("Failed to save user:", err));
+
+            NotificationManager.push({
+              message: "You have been logged in.",
+              type: "success",
+            });
+            router.replace("/messages");
+          } else {
+            NotificationManager.push({
+              message: res.message,
+              type: "error",
+            });
+          }
+        },
+        {
+          method: "POST",
+          token: false,
+          data: {
+            email,
+            password,
+          },
+          headers: {
+            Accept: "application/json",
+          },
         }
-      }, {
-        method: 'POST',
-        token: false,
-        data: {
-          email,
-          password,
-        }, 
-        headers: {
-          'Accept' : 'application/json' 
-        }
-      })
+      );
     } catch (e) {
-      NotificationManager.push({ message: `failed. ${e.message}`, type: "error" })
+      const message =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        "Server error";
+      NotificationManager.push({ message, type: "error" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <KeyboardAvoidingView
-      behavior={'padding'}
-      style={{ flex: 1 }}
-    >
-      <Loading running={loading} /> 
-      <TouchableWithoutFeedback 
+    <KeyboardAvoidingView behavior={"padding"} style={{ flex: 1 }}>
+      <Loading running={loading} />
+      <TouchableWithoutFeedback
         onPress={(e) => {
-          const isInput = e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA'
+          const isInput =
+            e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA";
           if (!isInput) {
-            Keyboard.dismiss()
+            Keyboard.dismiss();
           }
         }}
       >
@@ -94,7 +106,10 @@ const SignIn = () => {
 
           <SecondaryContainer
             scrollable
-            style={[styles.secondaryContainer, { width: '100%', maxWidth: 600 }]}
+            style={[
+              styles.secondaryContainer,
+              { width: "100%", maxWidth: 600 },
+            ]}
             contentContainerStyle={{ paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
           >
@@ -106,7 +121,7 @@ const SignIn = () => {
               value={email}
               onChangeText={(text) => setEmail(text)}
             />
-            
+
             <Spacer height={10} />
 
             <TextxInput
@@ -116,7 +131,7 @@ const SignIn = () => {
               onChangeText={(text) => setPassword(text)}
               password
             />
-            
+
             <Spacer />
             <Buttons
               style={[
@@ -124,16 +139,13 @@ const SignIn = () => {
                 {
                   width: screenWidth - 40,
                   maxWidth: 500,
-                  margin: "auto"
-                }
+                  margin: "auto",
+                },
               ]}
-              onPress={ loginUser }
-              disabled={ !email || !password }
+              onPress={loginUser}
+              disabled={!email || !password}
             >
-              <Textx
-                style={{ textAlign: "center", fontSize: 16 }}
-                primary
-              >
+              <Textx style={{ textAlign: "center", fontSize: 16 }} primary>
                 Log In
               </Textx>
             </Buttons>
@@ -143,14 +155,11 @@ const SignIn = () => {
                 Don't have an account?
               </Textx>
               <Buttons
-                type='secondary'
+                type="secondary"
                 style={{ paddingVertical: 0, paddingLeft: 5 }}
-                onPress = {() => router.replace("/signup")}
+                onPress={() => router.replace("/signup")}
               >
-                <Textx
-                  style={{ fontSize: 16 }}
-                  info
-                >
+                <Textx style={{ fontSize: 16 }} info>
                   Sign Up
                 </Textx>
               </Buttons>
@@ -159,29 +168,29 @@ const SignIn = () => {
         </BackgroundContainer>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
-  )
-}
+  );
+};
 
-export default SignIn
+export default SignIn;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
+    alignItems: "center",
+    justifyContent: "center",
   },
   subContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     maxWidth: 600,
-    margin: 'auto',
+    margin: "auto",
     padding: 20,
     flex: 1,
   },
   submitBtn: {
     paddingVertical: 20,
     borderRadius: 30,
-    marginVertical: 0
+    marginVertical: 0,
   },
   secondaryContainer: {
     paddingTop: 30,
@@ -189,34 +198,34 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 20,
     borderTopLeftRadius: 50,
-    flex: 1
+    flex: 1,
   },
   logoText: {
-    fontSize: 20
+    fontSize: 20,
   },
   alreadyContainer: {
     display: "flex",
     flexDirection: "row",
     margin: "auto",
-    paddingTop: 0
+    paddingTop: 0,
   },
   backBtn: {
-    position: 'absolute',
+    position: "absolute",
     top: 30,
     left: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
     paddingTop: 0,
     paddingBottom: 0,
     paddingLeft: 0,
-    paddingRight: 0
-  }
-})
+    paddingRight: 0,
+  },
+});
